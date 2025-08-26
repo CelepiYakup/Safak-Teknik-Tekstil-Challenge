@@ -1,0 +1,437 @@
+@use 'sass:color';
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.gantt-chart {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: $bg-primary;
+  color: $text-primary;
+  font-family: $font-family;
+  overflow: hidden;
+
+  &__header {
+    flex-shrink: 0;
+    padding: $space-6 $space-8;
+    background: $bg-secondary;
+    border-bottom: 1px solid $lane-border;
+
+    h1 {
+      margin: 0 0 $space-2 0;
+      font-size: $text-3xl;
+      font-weight: 700;
+      color: $text-primary;
+    }
+
+    &-description {
+      color: $text-muted;
+      margin-bottom: $space-4;
+    }
+
+    &-controls {
+      @include flex-start;
+      gap: $space-4;
+      margin-top: $space-4;
+      flex-wrap: wrap;
+    }
+
+    &-info {
+      background: color.change($info, $alpha: 0.1);
+      border: 1px solid color.change($info, $alpha: 0.3);
+      border-radius: 8px;
+      padding: $space-3 $space-4;
+      margin-top: $space-4;
+      @include flex-between;
+
+      &-text {
+        color: color.adjust($info, $lightness: 20%);
+        font-size: $text-sm;
+      }
+
+      &-clear {
+        @include button-secondary;
+        color: color.adjust($info, $lightness: 20%);
+        background-color: transparent;
+        
+        &:hover {
+          color: $text-primary;
+          background-color: color.change($info, $alpha: 0.2);
+        }
+      }
+    }
+  }
+
+  &__main {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  &__sidebar {
+    flex-shrink: 0;
+    width: 280px;
+    background: $bg-secondary;
+    border-right: 1px solid $lane-border;
+    overflow-y: auto;
+
+    @include tablet-up {
+      width: 320px;
+    }
+  }
+
+  &__timeline-container {
+    flex: 0 0 1605px;
+    width: 1605px;
+    min-width: 1605px;
+    max-width: 1605px;
+    background: $timeline-bg;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  &__loading {
+    @include flex-center;
+    min-height: 50vh;
+    font-size: $text-xl;
+    color: $text-secondary;
+
+    &-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid $lane-border;
+      border-top: 3px solid $info;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: $space-4;
+    }
+  }
+}
+
+.timeline {
+  position: relative;
+  width: 1605px;
+
+  &__header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: $bg-elevated;
+    border-bottom: 2px solid $lane-border;
+    padding: $space-4 0 $space-3;
+  }
+
+  &__time-axis {
+    height: 80px;
+    position: relative;
+    width: 100%;
+    padding: 0 $timeline-padding;
+  }
+
+  &__grid-lines {
+    position: absolute;
+    top: 0;
+    left: $timeline-padding;
+    right: $timeline-padding;
+    bottom: 0;
+    pointer-events: none;
+  }
+
+  &__grid-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: $grid-line;
+
+    &--major {
+      background: color.adjust($grid-line, $lightness: 10%);
+      width: 2px;
+    }
+
+    &--now {
+      background: $error;
+      width: 3px;
+      z-index: 50;
+      
+      &::before {
+        content: 'NOW';
+        position: absolute;
+        top: -25px;
+        left: -20px;
+        background: $error;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: $text-xs;
+        font-weight: 600;
+      }
+    }
+  }
+
+  &__tick {
+    position: absolute;
+    bottom: 6px;
+    font-size: $text-xs;
+    color: $text-muted;
+    transform: translateX(-50%);
+    white-space: nowrap;
+
+    &--major {
+      color: $text-secondary;
+      font-weight: 600;
+    }
+  }
+
+  &__body {
+    width: 100%;
+    padding: 0 $timeline-padding;
+  }
+}
+
+.machine-lane {
+  display: flex;
+  border-bottom: 1px solid $lane-border;
+  min-height: $lane-height;
+
+  &__label {
+    flex-shrink: 0;
+    width: 280px;
+    padding: $space-4;
+    background: $bg-secondary;
+    border-right: 1px solid $lane-border;
+    @include flex-start;
+
+    @include tablet-up {
+      width: 320px;
+    }
+
+    &-content {
+      h3 {
+        margin: 0 0 $space-1 0;
+        font-size: $text-lg;
+        color: $text-primary;
+      }
+
+      &-stats {
+        font-size: $text-xs;
+        color: $text-muted;
+      }
+    }
+  }
+
+  &__timeline {
+    flex: 1;
+    position: relative;
+    background: $lane-bg;
+    min-height: $lane-height;
+    
+    &:hover {
+      background: color.adjust($lane-bg, $lightness: 3%);
+    }
+  }
+}
+
+.operation-bar {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: $operation-height;
+  background: $operation-normal;
+  border-radius: 6px;
+  cursor: grab;
+  transition: all $transition-fast;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  min-width: $operation-min-width;
+
+  &:hover {
+    background: $operation-hover;
+    transform: translateY(-50%) translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+
+  &--selected {
+    background: $operation-selected;
+    box-shadow: 0 0 0 2px color.change($operation-selected, $alpha: 0.4);
+    z-index: 10;
+  }
+
+  &--highlighted {
+    background: $operation-selected;
+    box-shadow: 0 0 0 2px color.change($operation-selected, $alpha: 0.4);
+    z-index: 10;
+  }
+
+  &--conflict {
+    background: $operation-conflict;
+    animation: conflict-pulse 2s infinite;
+  }
+
+  &--dragging {
+    background: $operation-dragging;
+    cursor: grabbing;
+    z-index: 100;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  }
+
+  &__content {
+    padding: $space-2 $space-3;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    color: white;
+
+    &-title {
+      font-size: $text-xs;
+      font-weight: 600;
+      margin-bottom: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    &-subtitle {
+      font-size: $text-xs;
+      opacity: 0.9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  &__time-label {
+    position: absolute;
+    font-size: $text-xs;
+    color: $text-muted;
+    background: color.change($bg-primary, $alpha: 0.9);
+    padding: 1px 4px;
+    border-radius: 2px;
+    white-space: nowrap;
+    z-index: 20;
+
+    &--start {
+      top: -20px;
+      left: 0;
+    }
+
+    &--end {
+      bottom: -20px;
+      right: 0;
+    }
+  }
+}
+
+.sidebar {
+  &__section {
+    padding: $space-4;
+    border-bottom: 1px solid $lane-border;
+
+    &-title {
+      font-size: $text-sm;
+      font-weight: 600;
+      color: $text-secondary;
+      margin-bottom: $space-3;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  }
+
+  &__work-orders {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  &__search {
+    width: 100%;
+    padding: $space-2 $space-3;
+    background: $bg-tertiary;
+    border: 1px solid $lane-border;
+    border-radius: 4px;
+    color: $text-primary;
+    font-size: $text-sm;
+
+    &::placeholder {
+      color: $text-muted;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: $info;
+      box-shadow: 0 0 0 2px color.change($info, $alpha: 0.2);
+    }
+  }
+}
+
+.work-order-item {
+  padding: $space-3;
+  border-radius: 4px;
+  margin-bottom: $space-2;
+  cursor: pointer;
+  transition: all $transition-fast;
+  border: 1px solid transparent;
+
+  &:hover {
+    background: $bg-tertiary;
+  }
+
+  &--highlighted {
+    background: color.change($info, $alpha: 0.1);
+    border-color: $info;
+  }
+
+  &__header {
+    @include flex-between;
+    margin-bottom: $space-1;
+  }
+
+  &__id {
+    font-weight: 600;
+    color: $text-primary;
+    font-size: $text-sm;
+  }
+
+  &__status {
+    font-size: $text-xs;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: color.change($success, $alpha: 0.2);
+    color: $success;
+  }
+
+  &__product {
+    color: $text-secondary;
+    font-size: $text-sm;
+    margin-bottom: $space-1;
+  }
+
+  &__stats {
+    font-size: $text-xs;
+    color: $text-muted;
+  }
+}
+
+.controls {
+  @include flex-start;
+  gap: $space-2;
+
+  &__button {
+    @include button-secondary;
+    font-size: $text-xs;
+    padding: $space-1 $space-3;
+
+    &--active {
+      background: $info;
+      border-color: $info;
+      color: white;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .gantt-chart__sidebar { width: 240px; }
+  .machine-lane__label { width: 240px; }
+  .gantt-chart__header { padding: $space-4; }
+}

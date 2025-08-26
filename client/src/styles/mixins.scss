@@ -1,0 +1,120 @@
+@use 'sass:color';
+@use './variables' as *;
+
+@mixin mobile-up {
+  @media (min-width: $breakpoint-sm) { @content; }
+}
+
+@mixin tablet-up {
+  @media (min-width: $breakpoint-md) { @content; }
+}
+
+@mixin desktop-up {
+  @media (min-width: $breakpoint-lg) { @content; }
+}
+
+@mixin large-desktop-up {
+  @media (min-width: $breakpoint-xl) { @content; }
+}
+
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@mixin flex-start {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+@mixin button-base {
+  padding: $space-2 $space-4;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: $text-sm;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all $transition-fast;
+  
+  &:focus {
+    outline: 2px solid $info;
+    outline-offset: 2px;
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+@mixin button-primary {
+  @include button-base;
+  background-color: $info;
+  color: $text-primary;
+  
+  &:hover:not(:disabled) {
+    background-color: color.adjust($info, $lightness: -10%);
+  }
+}
+
+@mixin button-secondary {
+  @include button-base;
+  background-color: $bg-tertiary;
+  color: $text-secondary;
+  border: 1px solid $lane-border;
+  
+  &:hover:not(:disabled) {
+    background-color: $bg-elevated;
+    border-color: $text-muted;
+  }
+}
+
+@mixin card {
+  background-color: $bg-secondary;
+  border: 1px solid $lane-border;
+  border-radius: 0.75rem;
+  padding: $space-6;
+  transition: all $transition-fast;
+}
+
+@mixin card-hover {
+  @include card;
+  &:hover {
+    border-color: color.adjust($lane-border, $lightness: 10%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes conflict-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}

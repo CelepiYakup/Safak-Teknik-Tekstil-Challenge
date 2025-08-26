@@ -1,0 +1,62 @@
+@use "sass:color";
+@use "./variables" as *;
+@use "./mixins" as *;
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: $font-family;
+  background-color: $bg-primary;
+  color: $text-primary;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button {
+  font-family: inherit;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: $bg-secondary;
+}
+
+::-webkit-scrollbar-thumb {
+  background: $lane-border;
+  border-radius: 4px;
+
+  &:hover {
+    background: color.adjust($lane-border, $lightness: 10%);
+  }
+}
+
+*:focus {
+  outline: 2px solid $info;
+  outline-offset: 2px;
+}
+
+button:focus,
+[role="button"]:focus {
+  outline: 2px solid $info;
+  outline-offset: 2px;
+}
+
+::selection {
+  background-color: color.change($info, $alpha: 0.3);
+  color: $text-primary;
+}

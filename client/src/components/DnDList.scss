@@ -1,0 +1,21 @@
+@use '@/styles/variables.scss' as *;
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: $bg-secondary;
+  border: 1px solid $lane-border;
+  border-radius: 0.5rem;
+  color: $text-primary;
+  user-select: none;
+  margin-bottom: 0.5rem;
+}
+
+.grip {
+  font-family: $font-mono;
+  line-height: 1;
+  cursor: grab;
+  opacity: 0.6;
+}

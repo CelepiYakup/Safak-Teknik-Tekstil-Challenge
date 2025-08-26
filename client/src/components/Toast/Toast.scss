@@ -1,0 +1,60 @@
+@use 'sass:color';
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.toast {
+  position: fixed;
+  top: $space-6;
+  right: $space-6;
+  z-index: $z-toast;
+  max-width: 24rem;
+  padding: $space-4;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  animation: slideInRight $transition-smooth;
+  
+  &__content {
+    @include flex-between;
+    color: $text-primary;
+    gap: $space-3;
+  }
+  
+  &__message {
+    flex: 1;
+    font-size: $text-sm;
+  }
+  
+  &__close {
+    background: none;
+    border: none;
+    color: $text-primary;
+    font-size: $text-xl;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    @include flex-center;
+    border-radius: 50%;
+    transition: all $transition-fast;
+    
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+  }
+  
+  &--success {
+    background-color: $success;
+  }
+  
+  &--error {
+    background-color: $error;
+  }
+  
+  &--warning {
+    background-color: $warning;
+  }
+  
+  &--info {
+    background-color: $info;
+  }
+}
