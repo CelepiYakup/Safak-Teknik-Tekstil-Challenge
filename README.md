@@ -1,5 +1,5 @@
 
-<img src="client/public/safakpng.png" alt="safak Logo" width="50%"/>
+<img src="client/public/safaktech.jpg" alt="safak Logo" width="50%"/>
 
 # Safak-Teknik-Tekstil-Challenge
 
