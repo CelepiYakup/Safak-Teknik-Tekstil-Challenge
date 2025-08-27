@@ -1,6 +1,6 @@
-@use 'sass:color';
-@use '../../styles/variables' as *;
-@use '../../styles/mixins' as *;
+@use "sass:color";
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
 
 .gantt-chart {
   height: 100vh;
@@ -53,7 +53,7 @@
         @include button-secondary;
         color: color.adjust($info, $lightness: 20%);
         background-color: transparent;
-        
+
         &:hover {
           color: $text-primary;
           background-color: color.change($info, $alpha: 0.2);
@@ -82,13 +82,22 @@
   }
 
   &__timeline-container {
-    flex: 0 0 1605px;
-    width: 1605px;
-    min-width: 1605px;
+    flex: 0 0 1595px;
+    width: 1595px;
+    min-width: 1595px;
     max-width: 1605px;
     background: $timeline-bg;
     overflow-x: hidden;
     overflow-y: auto;
+  }
+
+  &__drag-feedback {
+    position: fixed;
+    top: $space-4;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    pointer-events: none;
   }
 
   &__loading {
@@ -106,6 +115,27 @@
       animation: spin 1s linear infinite;
       margin-bottom: $space-4;
     }
+  }
+}
+
+.drag-feedback {
+  background: $error;
+  color: white;
+  padding: $space-2 $space-4;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  @include flex-start;
+  gap: $space-2;
+  font-size: $text-sm;
+  font-weight: 500;
+  animation: slideInRight 0.2s ease-out;
+
+  &__icon {
+    font-size: $text-base;
+  }
+
+  &__message {
+    white-space: nowrap;
   }
 }
 
@@ -154,9 +184,9 @@
       background: $error;
       width: 3px;
       z-index: 50;
-      
+
       &::before {
-        content: 'NOW';
+        content: "NOW";
         position: absolute;
         top: -25px;
         left: -20px;
@@ -186,7 +216,6 @@
 
   &__body {
     width: 100%;
-    padding: 0 $timeline-padding;
   }
 }
 
@@ -226,7 +255,7 @@
     position: relative;
     background: $lane-bg;
     min-height: $lane-height;
-    
+
     &:hover {
       background: color.adjust($lane-bg, $lightness: 3%);
     }
@@ -274,6 +303,18 @@
     cursor: grabbing;
     z-index: 100;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    transform: translateY(-50%) translateY(-2px);
+
+    &.operation-bar--invalid {
+      background: color.change($error, $alpha: 0.8);
+      border: 2px solid $error;
+      animation: shake 0.3s ease-in-out;
+    }
+  }
+
+  &--invalid {
+    background: color.change($error, $alpha: 0.8);
+    border: 2px solid $error;
   }
 
   &__content {
@@ -430,8 +471,27 @@
   }
 }
 
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateY(-50%) translateX(0);
+  }
+  25% {
+    transform: translateY(-50%) translateX(-2px);
+  }
+  75% {
+    transform: translateY(-50%) translateX(2px);
+  }
+}
+
 @media (max-width: 768px) {
-  .gantt-chart__sidebar { width: 240px; }
-  .machine-lane__label { width: 240px; }
-  .gantt-chart__header { padding: $space-4; }
+  .gantt-chart__sidebar {
+    width: 240px;
+  }
+  .machine-lane__label {
+    width: 240px;
+  }
+  .gantt-chart__header {
+    padding: $space-4;
+  }
 }

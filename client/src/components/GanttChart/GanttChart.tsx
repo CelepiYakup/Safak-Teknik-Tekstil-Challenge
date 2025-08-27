@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
 import { useScheduleStore } from "../../store/useScheduleStore";
 import Toast from "../Toast/ToastHost";
 import {
@@ -10,6 +16,8 @@ import {
   getDurationHours,
   roundToNearestMinutes,
   generateAdaptiveTimeTicks,
+  getConstrainedDragPosition,
+  validateDragPosition,
 } from "../../utils/ganttUtils";
 import type { Operation, TimelineViewport, DragState } from "../../types";
 import "./GanttChart.scss";
@@ -29,9 +37,15 @@ const GanttChart: React.FC = () => {
   } = useScheduleStore();
 
   const [dragState, setDragState] = useState<DragState | null>(null);
-  const [selectedOperations, setSelectedOperations] = useState<Set<string>>(new Set());
+  const [selectedOperations, setSelectedOperations] = useState<Set<string>>(
+    new Set()
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"day" | "week">("day");
+  const [dragValidation, setDragValidation] = useState<{
+    isValid: boolean;
+    reason?: string;
+  } | null>(null);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -50,7 +64,10 @@ const GanttChart: React.FC = () => {
       start.setHours(8, 0, 0, 0);
       const end = new Date(now);
       end.setHours(18, 0, 0, 0);
-      const totalHours = Math.max(1, (end.getTime() - start.getTime()) / 3600000);
+      const totalHours = Math.max(
+        1,
+        (end.getTime() - start.getTime()) / 3600000
+      );
       const pixelsPerHour = fallbackWidth / totalHours;
       return {
         operations: [],
@@ -65,16 +82,24 @@ const GanttChart: React.FC = () => {
       };
     }
 
-    const times = allOperations.flatMap((op) => [new Date(op.start), new Date(op.end)]);
+    const times = allOperations.flatMap((op) => [
+      new Date(op.start),
+      new Date(op.end),
+    ]);
     const minTime = new Date(Math.min(...times.map((t) => t.getTime())));
     const maxTime = new Date(Math.max(...times.map((t) => t.getTime())));
     const padding = viewMode === "day" ? 2 : 12;
     const startTime = new Date(minTime.getTime() - padding * 3600000);
     const endTime = new Date(maxTime.getTime() + padding * 3600000);
-    const totalHours = Math.max(1, (endTime.getTime() - startTime.getTime()) / 3600000);
+    const totalHours = Math.max(
+      1,
+      (endTime.getTime() - startTime.getTime()) / 3600000
+    );
     const pixelsPerHour = fallbackWidth / totalHours;
 
-    const machines = Array.from(new Set(allOperations.map((op) => op.machineId))).sort();
+    const machines = Array.from(
+      new Set(allOperations.map((op) => op.machineId))
+    ).sort();
     const conflicts = detectConflicts(allOperations);
 
     return {
@@ -101,21 +126,27 @@ const GanttChart: React.FC = () => {
     );
   }, [workOrders, searchTerm]);
 
-  const timeTicks = useMemo(() => generateAdaptiveTimeTicks(timelineData.viewport, 120), [
-    timelineData.viewport,
-  ]);
+  const timeTicks = useMemo(
+    () => generateAdaptiveTimeTicks(timelineData.viewport, 120),
+    [timelineData.viewport]
+  );
 
   const machineStats = useMemo(() => {
-    const stats: Record<string, { operationCount: number; totalHours: number; utilization: number }> =
-      {};
+    const stats: Record<
+      string,
+      { operationCount: number; totalHours: number; utilization: number }
+    > = {};
     timelineData.machines.forEach((machineId) => {
-      const machineOps = timelineData.operations.filter((op) => op.machineId === machineId);
+      const machineOps = timelineData.operations.filter(
+        (op) => op.machineId === machineId
+      );
       const totalHours = machineOps.reduce(
         (sum, op) => sum + getDurationHours(op.start, op.end),
         0
       );
       const timeSpan =
-        (timelineData.viewport.endTime.getTime() - timelineData.viewport.startTime.getTime()) /
+        (timelineData.viewport.endTime.getTime() -
+          timelineData.viewport.startTime.getTime()) /
         3600000;
       stats[machineId] = {
         operationCount: machineOps.length,
@@ -126,67 +157,143 @@ const GanttChart: React.FC = () => {
     return stats;
   }, [timelineData.operations, timelineData.machines, timelineData.viewport]);
 
-  const handleOperationMouseDown = useCallback((operation: Operation, event: React.MouseEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-    const containerRect = rootRef.current?.getBoundingClientRect();
-    if (!containerRect || !rootRef.current) return;
-    const scrollX = scrollRef.current?.scrollLeft || 0;
-    setDragState({
-      operation,
-      initialX: event.clientX - containerRect.left + scrollX,
-      offsetX: event.clientX - rect.left,
-      dragStartTime: new Date(operation.start),
-    });
-    setSelectedOperations(new Set([operation.id]));
-  }, []);
+  const handleOperationMouseDown = useCallback(
+    (operation: Operation, event: React.MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+      const containerRect = rootRef.current?.getBoundingClientRect();
+      if (!containerRect || !rootRef.current) return;
+      const scrollX = scrollRef.current?.scrollLeft || 0;
+      setDragState({
+        operation,
+        initialX: event.clientX - containerRect.left + scrollX,
+        offsetX: event.clientX - rect.left,
+        dragStartTime: new Date(operation.start),
+      });
+      setSelectedOperations(new Set([operation.id]));
+    },
+    []
+  );
 
   const handleMouseMove = useCallback(
     (event: React.MouseEvent) => {
       if (!dragState || !rootRef.current) return;
+
       const containerRect = rootRef.current.getBoundingClientRect();
       const scrollX = scrollRef.current?.scrollLeft || 0;
       const currentX = event.clientX - containerRect.left + scrollX;
       const deltaPixels = currentX - dragState.initialX;
+
       const el = document.querySelector(
         `[data-operation-id="${dragState.operation.id}"]`
       ) as HTMLElement | null;
+
       if (el) {
-        const baseLeft = dateToPixels(new Date(dragState.operation.start), timelineData.viewport);
-        const newX = Math.max(0, baseLeft + deltaPixels);
-        el.style.left = `${newX}px`;
+        const baseLeft = dateToPixels(
+          new Date(dragState.operation.start),
+          timelineData.viewport
+        );
+        const tentativeX = Math.max(0, baseLeft + deltaPixels);
+
+        const constrainedX = getConstrainedDragPosition(
+          dragState.operation,
+          tentativeX,
+          timelineData.viewport,
+          workOrders,
+          timelineData.operations
+        );
+
+        const tentativeStart = pixelsToDate(tentativeX, timelineData.viewport);
+        const validation = validateDragPosition(
+          dragState.operation,
+          tentativeStart,
+          workOrders,
+          timelineData.operations
+        );
+
+        setDragValidation(validation);
+
+        el.style.left = `${constrainedX}px`;
         el.classList.add("operation-bar--dragging");
+
+        if (!validation.isValid) {
+          el.classList.add("operation-bar--invalid");
+        } else {
+          el.classList.remove("operation-bar--invalid");
+        }
       }
     },
-    [dragState, timelineData.viewport]
+    [dragState, timelineData.viewport, workOrders, timelineData.operations]
   );
 
   const handleMouseUp = useCallback(async () => {
     if (!dragState) return;
+
     const el = document.querySelector(
       `[data-operation-id="${dragState.operation.id}"]`
     ) as HTMLElement | null;
-    if (el) el.classList.remove("operation-bar--dragging");
+
+    if (el) {
+      el.classList.remove("operation-bar--dragging", "operation-bar--invalid");
+    }
+
     const rawLeft = parseFloat(el?.style.left || "0");
     const newStartTime = pixelsToDate(rawLeft, timelineData.viewport);
     const roundedStartTime = roundToNearestMinutes(newStartTime);
-    const duration = getDurationHours(dragState.operation.start, dragState.operation.end);
-    const newEndTime = new Date(roundedStartTime.getTime() + duration * 3600000);
+    const duration = getDurationHours(
+      dragState.operation.start,
+      dragState.operation.end
+    );
+    const newEndTime = new Date(
+      roundedStartTime.getTime() + duration * 3600000
+    );
+
+    const finalValidation = validateDragPosition(
+      dragState.operation,
+      roundedStartTime,
+      workOrders,
+      timelineData.operations
+    );
+
+    if (!finalValidation.isValid) {
+      if (el) {
+        const originalX = dateToPixels(
+          new Date(dragState.operation.start),
+          timelineData.viewport
+        );
+        el.style.left = `${originalX}px`;
+      }
+      setDragState(null);
+      setDragValidation(null);
+      return;
+    }
+
     try {
       await updateOperation(
         dragState.operation.id,
         roundedStartTime.toISOString(),
         newEndTime.toISOString()
       );
-    } catch {
+    } catch (error) {
       if (el) {
-        const originalX = dateToPixels(new Date(dragState.operation.start), timelineData.viewport);
+        const originalX = dateToPixels(
+          new Date(dragState.operation.start),
+          timelineData.viewport
+        );
         el.style.left = `${originalX}px`;
       }
     }
+
     setDragState(null);
-  }, [dragState, timelineData.viewport, updateOperation]);
+    setDragValidation(null);
+  }, [
+    dragState,
+    timelineData.viewport,
+    updateOperation,
+    workOrders,
+    timelineData.operations,
+  ]);
 
   const handleOperationClick = useCallback(
     (operation: Operation, event: React.MouseEvent) => {
@@ -204,11 +311,14 @@ const GanttChart: React.FC = () => {
   const getOperationClassName = useCallback(
     (operation: Operation) => {
       const classes = ["operation-bar"];
-      if (selectedOperations.has(operation.id)) classes.push("operation-bar--selected");
+      if (selectedOperations.has(operation.id))
+        classes.push("operation-bar--selected");
       if (highlightedWorkOrderId === operation.workOrderId)
         classes.push("operation-bar--highlighted");
       const hasConflict = timelineData.conflicts.some(
-        (c) => c.operationId === operation.id || c.conflictWith.includes(operation.id)
+        (c) =>
+          c.operationId === operation.id ||
+          c.conflictWith.includes(operation.id)
       );
       if (hasConflict) classes.push("operation-bar--conflict");
       return classes.join(" ");
@@ -231,7 +341,19 @@ const GanttChart: React.FC = () => {
 
   return (
     <div className="gantt-chart" ref={rootRef}>
-      {toast && <Toast message={toast.message} type={toast.type} onClose={clearToast} />}
+      {toast && (
+        <Toast message={toast.message} type={toast.type} onClose={clearToast} />
+      )}
+
+      {dragValidation && !dragValidation.isValid && (
+        <div className="gantt-chart__drag-feedback">
+          <div className="drag-feedback">
+            <span className="drag-feedback__message">
+              {dragValidation.reason}
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="gantt-chart__header">
         <h1>Factory Production Schedule</h1>
@@ -243,13 +365,17 @@ const GanttChart: React.FC = () => {
           <div className="controls">
             <div>
               <button
-                className={`controls__button ${viewMode === "day" ? "controls__button--active" : ""}`}
+                className={`controls__button ${
+                  viewMode === "day" ? "controls__button--active" : ""
+                }`}
                 onClick={() => setViewMode("day")}
               >
                 Daily
               </button>
               <button
-                className={`controls__button ${viewMode === "week" ? "controls__button--active" : ""}`}
+                className={`controls__button ${
+                  viewMode === "week" ? "controls__button--active" : ""
+                }`}
                 onClick={() => setViewMode("week")}
               >
                 Weekly
@@ -263,7 +389,10 @@ const GanttChart: React.FC = () => {
             <span className="gantt-chart__header-info-text">
               Selected Work Order: {highlightedWorkOrderId}
             </span>
-            <button onClick={() => setHighlight(null)} className="gantt-chart__header-info-clear">
+            <button
+              onClick={() => setHighlight(null)}
+              className="gantt-chart__header-info-clear"
+            >
               Clear
             </button>
           </div>
@@ -284,12 +413,18 @@ const GanttChart: React.FC = () => {
           </div>
 
           <div className="sidebar__section">
-            <div className="sidebar__section-title">Work Orders ({filteredWorkOrders.length})</div>
+            <div className="sidebar__section-title">
+              Work Orders ({filteredWorkOrders.length})
+            </div>
             <div className="sidebar__work-orders">
               {filteredWorkOrders.map((wo) => (
                 <div
                   key={wo.id}
-                  className={`work-order-item ${highlightedWorkOrderId === wo.id ? "work-order-item--highlighted" : ""}`}
+                  className={`work-order-item ${
+                    highlightedWorkOrderId === wo.id
+                      ? "work-order-item--highlighted"
+                      : ""
+                  }`}
                   onClick={() => setHighlight(wo.id)}
                 >
                   <div className="work-order-item__header">
@@ -321,25 +456,38 @@ const GanttChart: React.FC = () => {
                   {timeTicks.map((tick, index) => (
                     <div
                       key={index}
-                      className={`timeline__grid-line ${tick.getMinutes() === 0 ? "timeline__grid-line--major" : ""}`}
-                      style={{ left: dateToPixels(tick, timelineData.viewport) }}
+                      className={`timeline__grid-line ${
+                        tick.getMinutes() === 0
+                          ? "timeline__grid-line--major"
+                          : ""
+                      }`}
+                      style={{
+                        left: dateToPixels(tick, timelineData.viewport),
+                      }}
                     />
                   ))}
-                  {now >= timelineData.viewport.startTime && now <= timelineData.viewport.endTime && (
-                    <div
-                      className="timeline__grid-line timeline__grid-line--now"
-                      style={{ left: dateToPixels(now, timelineData.viewport) }}
-                    />
-                  )}
+                  {now >= timelineData.viewport.startTime &&
+                    now <= timelineData.viewport.endTime && (
+                      <div
+                        className="timeline__grid-line timeline__grid-line--now"
+                        style={{
+                          left: dateToPixels(now, timelineData.viewport),
+                        }}
+                      />
+                    )}
                 </div>
 
                 {timeTicks.map((tick, index) => (
                   <div
                     key={index}
-                    className={`timeline__tick ${tick.getMinutes() === 0 ? "timeline__tick--major" : ""}`}
+                    className={`timeline__tick ${
+                      tick.getMinutes() === 0 ? "timeline__tick--major" : ""
+                    }`}
                     style={{ left: dateToPixels(tick, timelineData.viewport) }}
                   >
-                    {tick.getMinutes() === 0 ? `${formatTime(tick)} ${formatDate(tick)}` : formatTime(tick)}
+                    {tick.getMinutes() === 0
+                      ? `${formatTime(tick)} ${formatDate(tick)}`
+                      : formatTime(tick)}
                   </div>
                 ))}
               </div>
@@ -352,8 +500,10 @@ const GanttChart: React.FC = () => {
                     <div className="machine-lane__label-content">
                       <h3>{machineId}</h3>
                       <div className="machine-lane__label-content-stats">
-                        {machineStats[machineId]?.operationCount || 0} operations •{" "}
-                        {Math.round(machineStats[machineId]?.utilization || 0)}% utilization
+                        {machineStats[machineId]?.operationCount || 0}{" "}
+                        operations •{" "}
+                        {Math.round(machineStats[machineId]?.utilization || 0)}%
+                        utilization
                       </div>
                     </div>
                   </div>
@@ -362,21 +512,36 @@ const GanttChart: React.FC = () => {
                     {timelineData.operations
                       .filter((op) => op.machineId === machineId)
                       .map((operation) => {
-                        const left = dateToPixels(new Date(operation.start), timelineData.viewport);
+                        const left = dateToPixels(
+                          new Date(operation.start),
+                          timelineData.viewport
+                        );
                         const width =
-                          dateToPixels(new Date(operation.end), timelineData.viewport) - left;
+                          dateToPixels(
+                            new Date(operation.end),
+                            timelineData.viewport
+                          ) - left;
                         return (
                           <div
                             key={operation.id}
                             data-operation-id={operation.id}
                             className={getOperationClassName(operation)}
-                            style={{ left: `${left}px`, width: `${Math.max(width, 80)}px` }}
-                            onMouseDown={(e) => handleOperationMouseDown(operation, e)}
+                            style={{
+                              left: `${left}px`,
+                              width: `${Math.max(width, 80)}px`,
+                            }}
+                            onMouseDown={(e) =>
+                              handleOperationMouseDown(operation, e)
+                            }
                             onClick={(e) => handleOperationClick(operation, e)}
                           >
                             <div className="operation-bar__content">
-                              <div className="operation-bar__content-title">{operation.workOrderId}</div>
-                              <div className="operation-bar__content-subtitle">{operation.name}</div>
+                              <div className="operation-bar__content-title">
+                                {operation.workOrderId}
+                              </div>
+                              <div className="operation-bar__content-subtitle">
+                                {operation.name}
+                              </div>
                             </div>
                             <div className="operation-bar__time-label operation-bar__time-label--start">
                               {formatTime(new Date(operation.start))}
