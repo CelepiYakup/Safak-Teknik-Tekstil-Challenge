@@ -528,7 +528,7 @@ const GanttChart: React.FC = () => {
                             className={getOperationClassName(operation)}
                             style={{
                               left: `${left}px`,
-                              width: `${Math.max(width, 80)}px`,
+                              // width: `${Math.max(width, 80)}px`,
                             }}
                             onMouseDown={(e) =>
                               handleOperationMouseDown(operation, e)
