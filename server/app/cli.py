@@ -8,11 +8,10 @@ def register_cli(app):
     @app.cli.command("seed")
     def seed():
         """Load sample data from server/seeds/seed.json."""
-        # Birden fazla path dene
         possible_paths = [
-            "/app/seeds/seed.json",  # Docker container
-            os.path.join(os.getcwd(), "seeds", "seed.json"),  # Current directory
-            os.path.join(app.root_path, "..", "seeds", "seed.json"),  # Relative to app
+            "/app/seeds/seed.json",
+            os.path.join(os.getcwd(), "seeds", "seed.json"),
+            os.path.join(app.root_path, "..", "seeds", "seed.json"), 
             os.path.join(os.path.dirname(os.path.dirname(app.root_path)), "seeds", "seed.json"),  # Two levels up
         ]
         
@@ -37,7 +36,6 @@ def register_cli(app):
             data = json.load(f)
 
         for w in data:
-            # Önce work order'ın var olup olmadığını kontrol et
             existing_wo = WorkOrder.query.filter_by(id=w["id"]).first()
             if existing_wo:
                 print(f"Work Order {w['id']} zaten mevcut, atlanıyor...")
@@ -47,7 +45,6 @@ def register_cli(app):
             db.session.add(wo)
             
             for o in w.get("operations", []):
-                # Operation'ın var olup olmadığını kontrol et
                 existing_op = Operation.query.filter_by(id=o["id"]).first()
                 if existing_op:
                     print(f"Operation {o['id']} zaten mevcut, atlanıyor...")

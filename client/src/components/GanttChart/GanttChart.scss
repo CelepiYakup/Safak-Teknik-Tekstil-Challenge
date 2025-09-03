@@ -93,11 +93,34 @@
 
   &__drag-feedback {
     position: fixed;
-    top: $space-4;
+    top: 20px;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 1000;
+    z-index: 9999;
     pointer-events: none;
+
+    .drag-feedback {
+      background: rgba(220, 38, 38, 0.95);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(8px);
+      
+      &__message {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        
+        &::before {
+          content: '!';
+          font-size: 16px;
+          font-weight: bold;
+        }
+      }
+    }
   }
 
   &__loading {
@@ -115,27 +138,6 @@
       animation: spin 1s linear infinite;
       margin-bottom: $space-4;
     }
-  }
-}
-
-.drag-feedback {
-  background: $error;
-  color: white;
-  padding: $space-2 $space-4;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  @include flex-start;
-  gap: $space-2;
-  font-size: $text-sm;
-  font-weight: 500;
-  animation: slideInRight 0.2s ease-out;
-
-  &__icon {
-    font-size: $text-base;
-  }
-
-  &__message {
-    white-space: nowrap;
   }
 }
 
@@ -259,6 +261,22 @@
     &:hover {
       background: color.adjust($lane-bg, $lightness: 3%);
     }
+
+    &.drag-over {
+      background-color: rgba(34, 197, 94, 0.1);
+      
+      &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border: 2px dashed rgba(34, 197, 94, 0.5);
+        border-radius: 4px;
+        pointer-events: none;
+      }
+    }
   }
 }
 
@@ -270,15 +288,26 @@
   background: $operation-normal;
   border-radius: 6px;
   cursor: grab;
-  transition: all $transition-fast;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   min-width: $operation-min-width;
+  -webkit-user-drag: none;
+  -moz-user-drag: none;
 
   &:hover {
     background: $operation-hover;
     transform: translateY(-50%) translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+
+  &[aria-grabbed="true"] {
+    transform: scale(1.02);
   }
 
   &--selected {
@@ -299,11 +328,13 @@
   }
 
   &--dragging {
-    background: $operation-dragging;
-    cursor: grabbing;
-    z-index: 100;
+    opacity: 0.8;
+    transform-origin: top left;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-    transform: translateY(-50%) translateY(-2px);
+    z-index: 1000;
+    cursor: grabbing;
+    pointer-events: none;
+    will-change: transform;
 
     &.operation-bar--invalid {
       background: color.change($error, $alpha: 0.8);
@@ -315,6 +346,42 @@
   &--invalid {
     background: color.change($error, $alpha: 0.8);
     border: 2px solid $error;
+  }
+
+  &--overlay {
+    pointer-events: none;
+    transform-origin: top left;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(45deg, 
+        rgba(255, 255, 255, 0.1), 
+        rgba(255, 255, 255, 0.05)
+      );
+      border-radius: inherit;
+      pointer-events: none;
+    }
+  }
+
+  &:not(.operation-bar--dragging) {
+    cursor: grab;
+    
+    &:hover {
+      cursor: grab;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    &:active {
+      cursor: grabbing;
+    }
   }
 
   &__content {
@@ -472,8 +539,7 @@
 }
 
 @keyframes shake {
-  0%,
-  100% {
+  0%, 100% {
     transform: translateY(-50%) translateX(0);
   }
   25% {
@@ -481,6 +547,21 @@
   }
   75% {
     transform: translateY(-50%) translateX(2px);
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .operation-bar {
+    min-height: 44px;
+    
+    &:not(.operation-bar--dragging) {
+      cursor: default;
+    }
   }
 }
 
